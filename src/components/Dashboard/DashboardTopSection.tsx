@@ -750,26 +750,6 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
           {/* =================================================
               CADASTRO POR VOZ — somente mobile, ao lado do seletor de datas
           ================================================= */}
-          {onVoiceClick && (
-            <button
-              type="button"
-              onClick={onVoiceClick}
-              aria-label="Cadastro por voz"
-              className="
-                lg:hidden
-                flex items-center gap-1.5
-                bg-gradient-to-r from-[#2563EB] to-[#2a9d8f]
-                text-white rounded-full shadow-sm
-                border border-transparent
-                px-3 py-1.5
-                text-sm font-semibold
-                hover:opacity-90 active:opacity-80 transition-opacity
-              "
-            >
-              <Mic className="h-4 w-4" />
-              Voz
-            </button>
-          )}
 
           {/* =================================================
               NAVEGADOR DE MÊS
@@ -853,7 +833,7 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="
-                hidden lg:flex items-center gap-2.5
+                flex items-center gap-2.5
                 bg-white rounded-full shadow-sm
                 border border-slate-200
                 pl-2 pr-4 py-1.5
