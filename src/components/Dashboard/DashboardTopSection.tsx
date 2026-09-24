@@ -833,7 +833,7 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="
-                hidden lg:flex items-center gap-2.5
+                flex items-center gap-2.5
                 bg-white rounded-full shadow-sm
                 border border-slate-200
                 pl-2 pr-4 py-1.5
