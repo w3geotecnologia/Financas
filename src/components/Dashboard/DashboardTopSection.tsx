@@ -670,6 +670,22 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
             </div>
           )}
 
+          {/* Botão Relatório do Resumo Financeiro */}
+          <Link
+            to="/relatorio-resumo"
+            className="
+              flex items-center gap-2
+              bg-white rounded-full shadow-sm
+              border border-slate-200
+              px-4 py-2
+              text-sm font-semibold text-[#0F172A]
+              hover:bg-slate-50 transition-colors
+            "
+          >
+            <FileSearch className="h-4 w-4 text-[#16A34A]" />
+            Relatório
+          </Link>
+
           {/* Desktop: dropdown hover/clique */}
           <div
             className="relative hidden lg:block"
