@@ -26,6 +26,7 @@ import CartoesCredito from "./pages/CartoesCredito";
 import Install from "./pages/Install";
 import ChangePassword from "./pages/ChangePassword";
 import VoiceAccountPage from "./pages/VoiceAccountPage";
+import RelatorioResumo from "./pages/RelatorioResumo";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -111,6 +112,13 @@ const App = () => {
                     <ProtectedRoute>
                       <AccessControlWrapper>
                         <Analise />
+                      </AccessControlWrapper>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/relatorio-resumo" element={
+                    <ProtectedRoute>
+                      <AccessControlWrapper>
+                        <RelatorioResumo />
                       </AccessControlWrapper>
                     </ProtectedRoute>
                   } />
