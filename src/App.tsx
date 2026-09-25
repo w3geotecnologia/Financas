@@ -26,7 +26,7 @@ import CartoesCredito from "./pages/CartoesCredito";
 import Install from "./pages/Install";
 import ChangePassword from "./pages/ChangePassword";
 import VoiceAccountPage from "./pages/VoiceAccountPage";
-import RelatorioResumo from "./pages/RelatorioResumo";
+import MenuFinanceiro from "./pages/MenuFinanceiro";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -115,13 +115,6 @@ const App = () => {
                       </AccessControlWrapper>
                     </ProtectedRoute>
                   } />
-                  <Route path="/relatorio-resumo" element={
-                    <ProtectedRoute>
-                      <AccessControlWrapper>
-                        <RelatorioResumo />
-                      </AccessControlWrapper>
-                    </ProtectedRoute>
-                  } />
                   <Route path="/relatorios" element={
                     <ProtectedRoute>
                       <AccessControlWrapper>
@@ -148,6 +141,13 @@ const App = () => {
                     <ProtectedRoute>
                       <AccessControlWrapper>
                         <VoiceAccountPage />
+                      </AccessControlWrapper>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/menu" element={
+                    <ProtectedRoute>
+                      <AccessControlWrapper>
+                        <MenuFinanceiro />
                       </AccessControlWrapper>
                     </ProtectedRoute>
                   } />
