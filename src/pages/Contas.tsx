@@ -1,6 +1,5 @@
 // pages/Contas.tsx
 import React from 'react';
-import { MainMenuButton } from '@/components/MainMenuButton';
 import { FloatingCalculator } from '@/components/Accounts/FloatingCalculator';
 import { Layout } from '@/components/Layout';
 import { AccountsFilters } from '@/components/Accounts/AccountsFilters';
@@ -23,7 +22,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 const Contas: React.FC = () => {
   const { accounts, loading, refreshAccounts } = useAccounts() as any;
@@ -32,30 +30,6 @@ const Contas: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [calcOpen, setCalcOpen] = React.useState(false);
-  const [banksRaw, setBanksRaw] = React.useState(0);
-  // Saldo individual por banco: { [bankId: string]: number }
-  const [banksById, setBanksById] = React.useState<Record<string, number>>({});
-
-  // Buscar saldo total dos bancos — extraído como callback para poder ser
-  // chamado manualmente após gravar/editar/excluir uma conta
-  const fetchBanks = React.useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data } = await supabase
-      .from('banks')
-      .select('id, balance')
-      .eq('user_id', user.id);
-    const total = (data || []).reduce((s: number, b: any) => s + (Number(b.balance) || 0), 0);
-    setBanksRaw(total);
-    // Guardar saldo individual por banco
-    const byId: Record<string, number> = {};
-    (data || []).forEach((b: any) => { byId[String(b.id)] = Number(b.balance) || 0; });
-    setBanksById(byId);
-  }, []);
-
-  React.useEffect(() => {
-    fetchBanks();
-  }, [fetchBanks]);
   
 
   useAccountsReminder(accounts);
@@ -155,37 +129,6 @@ const Contas: React.FC = () => {
   // exatamente o resultado já filtrado pelo hook (filteredAccounts), em vez do
   // cálculo baseado em mês/ano (que ignora o intervalo de datas).
   const useFilteredAccountsForCards = hasActiveSearch || hasPeriodFilter;
-
-  // Saldo bancário ajustado pela posição do mês selecionado
-  // (desconta lançamentos liquidados após o mês selecionado)
-  // Quando há um banco filtrado, usa o saldo individual daquele banco
-  // e considera apenas os lançamentos daquele banco para o ajuste futuro.
-  const banksTotal = React.useMemo(() => {
-    const endOfSelectedMonth = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
-
-    // Base: saldo do banco filtrado ou soma de todos os bancos
-    const baseBalance =
-      bankFilter && bankFilter !== 'todos'
-        ? (banksById[bankFilter] ?? 0)
-        : banksRaw;
-
-    const futureEffect = accounts.reduce((s: number, a: any) => {
-      if (!a.dueDate) return s;
-      const status = a.status?.toLowerCase();
-      if (status !== 'pago' && status !== 'recebido') return s;
-      // Se há filtro de banco, considerar apenas lançamentos daquele banco
-      if (bankFilter && bankFilter !== 'todos') {
-        const accBankId = a.payment_source_id?.toString() || a.bank_id?.toString();
-        if (accBankId !== bankFilter) return s;
-      }
-      const d = new Date(a.dueDate + 'T00:00:00');
-      if (d <= endOfSelectedMonth) return s;
-      const amount = Math.abs(a.amount || 0);
-      return a.type === 'receita' ? s + amount : s - amount;
-    }, 0);
-
-    return baseBalance - futureEffect;
-  }, [banksRaw, banksById, bankFilter, accounts, currentMonth, currentYear]);
 
   // Calcular saldo acumulado até um determinado mês/ano (OTIMIZADO)
   const calculateAccumulatedBalance = React.useCallback((untilMonth: number, untilYear: number, paymentSourceFilter?: string, bankIdFilter?: string) => {
@@ -353,19 +296,8 @@ const Contas: React.FC = () => {
     });
   }, [accounts, currentMonth, currentYear, isShowingAll, bankFilter]);
 
-  const handleSubmit = async (data: AccountFormData) => {
-    await handleSave(data);
-    fetchBanks();
-  };
-
-  const handleDeleteWithRefresh = async (id: string) => {
-    await handleDelete(id);
-    fetchBanks();
-  };
-
-  const handleStatusChangeWithRefresh = async (id: string, status: string) => {
-    await handleStatusChange(id, status);
-    fetchBanks();
+  const handleSubmit = (data: AccountFormData) => {
+    handleSave(data);
   };
 
   const renderContent = () => {
@@ -396,7 +328,14 @@ const Contas: React.FC = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 w-full">
-              <MainMenuButton />
+              <Button
+                onClick={() => navigate('/')}
+                variant="outline"
+                className="w-full sm:w-auto h-10 px-4 flex items-center justify-center gap-2 rounded-md bg-white border border-slate-200 text-slate-700 shadow-sm hover:bg-slate-50 hover:border-blue-300"
+              >
+                <Home className="h-5 w-5 text-blue-600" />
+                Menu Financeiro
+              </Button>
               <Button
                 onClick={handleNewAccount}
                 className="w-full sm:w-auto h-10 px-4 inline-flex items-center justify-center gap-2 rounded-md bg-white border border-slate-200 text-slate-700 font-medium shadow-sm transition-all hover:bg-slate-50 hover:border-blue-300"
@@ -457,14 +396,13 @@ const Contas: React.FC = () => {
           <AccountsSummaryCardsMobile 
             accounts={useFilteredAccountsForCards ? filteredAccounts : getFilteredAccountsForCalculations()} 
             previousBalance={previousBalance}
-            saldoFinal={banksTotal}
           />
 
           {/* Lista simplificada de contas */}
           <AccountsListMobile 
             accounts={filteredAccounts} 
             onEdit={handleEdit}
-            onDelete={handleDeleteWithRefresh}
+            onDelete={handleDelete}
           />
 
           <AccountModal
@@ -492,7 +430,16 @@ const Contas: React.FC = () => {
             </p>
           </div>
 
-          <MainMenuButton />
+          <Button
+            onClick={() => navigate('/')}
+            variant="outline"
+            title="Voltar para a Homepage"
+            aria-label="Voltar para a Homepage"
+            className="shrink-0 h-10 px-4 inline-flex items-center gap-2 rounded-md bg-white border border-slate-200 text-slate-700 shadow-sm hover:bg-slate-50 hover:border-blue-300"
+          >
+            <Home className="h-4 w-4 text-blue-600" />
+            <span>Menu Financeiro</span>
+          </Button>
 
           <Button
             type="button"
@@ -526,8 +473,7 @@ const Contas: React.FC = () => {
           {/* Cards de resumo */}
           <AccountsSummaryCards 
             accounts={useFilteredAccountsForCards ? filteredAccounts : getFilteredAccountsForCalculations()} 
-            previousBalance={previousBalance}
-            saldoFinal={banksTotal} 
+            previousBalance={previousBalance} 
             isJanuary={currentMonth === 0}
             onFilterRecebido={() => { setTypeFilter('receita'); setStatusFilter('recebido'); }}
             onFilterPago={() => { setTypeFilter('despesa'); setStatusFilter('pago'); }}
@@ -572,8 +518,8 @@ const Contas: React.FC = () => {
           <AccountsTable
             accounts={filteredAccounts}
             onEdit={handleEdit}
-            onDelete={handleDeleteWithRefresh}
-            onStatusChange={handleStatusChangeWithRefresh}
+            onDelete={handleDelete}
+            onStatusChange={handleStatusChange}
           />
         </div>
 

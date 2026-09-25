@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { MainMenuButton } from '@/components/MainMenuButton';
 import { Home, Plus } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
@@ -239,19 +238,6 @@ const CardAccounts = () => {
             </div>
           </div>
 
-          {/* Botões de ação — Menu Principal e Nova Conta (acima dos filtros) */}
-          <div className="flex flex-col sm:flex-row gap-3 w-full px-1">
-            <MainMenuButton />
-            <Button
-              type="button"
-              onClick={() => handleOpenModal()}
-              className="w-full sm:w-auto h-10 px-4 inline-flex items-center justify-center gap-2 rounded-md bg-white border border-slate-200 text-slate-700 font-medium shadow-sm transition-all hover:bg-slate-50 hover:border-blue-300"
-            >
-              <Plus className="h-4 w-4 text-blue-600" />
-              <span>Nova Conta</span>
-            </Button>
-          </div>
-
           <CardAccountsFilters
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
@@ -263,6 +249,26 @@ const CardAccounts = () => {
             setMonthFilter={setMonthFilter}
             yearFilter={yearFilter}
             setYearFilter={setYearFilter}
+            actionSlot={
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <Button
+                  onClick={() => navigate('/')}
+                  variant="outline"
+                  className="w-full sm:w-auto h-10 px-4 flex items-center justify-center gap-2 rounded-md bg-white border border-slate-200 text-slate-700 shadow-sm hover:bg-slate-50 hover:border-blue-300"
+                >
+                  <Home className="h-5 w-5 text-blue-600" />
+                  Menu Financeiro
+                </Button>
+              <Button
+                type="button"
+                onClick={() => handleOpenModal()}
+                className="w-full sm:w-auto h-10 px-4 inline-flex items-center justify-center gap-2 rounded-md bg-white border border-slate-200 text-slate-700 font-medium shadow-sm transition-all hover:bg-slate-50 hover:border-blue-300"
+              >
+                <Plus className="h-4 w-4 text-blue-600" />
+                <span>Nova Conta</span>
+              </Button>
+              </div>
+            }
           />
 
           <p className="text-sm text-slate-600 px-1" aria-live="polite">
@@ -344,7 +350,16 @@ const CardAccounts = () => {
               </p>
             </div>
 
-            <MainMenuButton />
+            <Button
+              onClick={() => navigate('/')}
+              variant="outline"
+              title="Voltar para a Homepage"
+              aria-label="Voltar para a Homepage"
+              className="shrink-0 h-10 px-4 inline-flex items-center gap-2 rounded-md bg-white border border-slate-200 text-slate-700 shadow-sm hover:bg-slate-50 hover:border-blue-300"
+            >
+              <Home className="h-4 w-4 text-blue-600" />
+              <span>Menu Financeiro</span>
+            </Button>
 
             <Button
               type="button"
