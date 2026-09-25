@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCreditCardsData } from '@/hooks/useCreditCardsData';
+import { CardBrandIcon } from '@/components/CreditCards/CardBrandIcons';
 import { formatCurrency } from '@/utils/formatters';
-import { Button } from '@/components/ui/button';
 
 const formatDueDay = (dueDate?: string) => {
   if (!dueDate) return null;
@@ -15,14 +15,18 @@ const formatDueDay = (dueDate?: string) => {
   return Number.isFinite(day) && day > 0 ? `Dia ${day}` : null;
 };
 
-const lastFourDigits = (cardNumber: string) => {
-  const digits = cardNumber.replace(/\D/g, '');
-  return digits.slice(-4).padStart(4, 'â€¢');
-};
-
 export const CreditCardsOverviewCard: React.FC = () => {
   const { creditCards, isLoading } = useCreditCardsData();
   const navigate = useNavigate();
+
+  const totalDue = useMemo(
+    () =>
+      creditCards.reduce(
+        (acc, card) => acc + Number(card.current_value || 0),
+        0
+      ),
+    [creditCards]
+  );
 
   return (
     <div
@@ -30,15 +34,13 @@ export const CreditCardsOverviewCard: React.FC = () => {
       style={{ height: '420px' }}
     >
       <div className="flex items-center justify-between shrink-0">
-        <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide">CartÃµes</h3>
-        <Button
-          type="button"
-          variant="link"
+        <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide">Cartões</h3>
+        <button
           onClick={() => navigate('/cartoes-credito')}
-          className="h-auto p-0 text-sm text-blue-600 hover:text-blue-700"
+          className="text-sm font-medium text-blue-600 hover:text-blue-700"
         >
           Ver todos
-        </Button>
+        </button>
       </div>
 
       <div
@@ -50,40 +52,52 @@ export const CreditCardsOverviewCard: React.FC = () => {
         )}
 
         {!isLoading && creditCards.length === 0 && (
-          <p className="text-sm text-slate-400 py-6 text-center">Nenhum cartÃ£o cadastrado.</p>
+          <p className="text-sm text-slate-400 py-6 text-center">Nenhum cartão cadastrado.</p>
         )}
 
         {!isLoading && creditCards.length > 0 && (
           <div className="space-y-3">
             {creditCards.map((card) => {
+              const limit = Number(card.credit_limit || 0);
               const used = Number(card.current_value || 0);
+              const percent = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
               const due = formatDueDay(card.due_date);
 
               return (
                 <div
                   key={card.id}
-                  className="rounded-lg border border-slate-200 p-3.5 hover:border-slate-300 transition-colors"
+                  className="rounded-xl border border-slate-200 p-3 hover:border-slate-300 transition-colors"
                 >
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="min-w-0 truncate text-sm font-semibold text-slate-800">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-sm font-semibold text-slate-800 truncate">
                       {card.card_name}
                     </span>
-                    <span className="shrink-0 text-xs font-medium text-slate-500">
-                      â€¢â€¢â€¢â€¢ {lastFourDigits(card.card_number)}
-                    </span>
+                    <CardBrandIcon brand={card.card_brand} className="w-10 h-6" />
                   </div>
 
-                  <div className="mt-3 flex items-end justify-between gap-3">
+                  <div className="mt-2 flex items-end justify-between gap-2">
                     <div>
-                      <p className="text-[11px] font-medium uppercase text-slate-500">Fatura atual</p>
-                      <p className="mt-0.5 text-base font-bold text-red-500">
+                      <p className="text-xs text-slate-500">Fatura atual</p>
+                      <p className="text-base font-bold text-slate-800">
                         {formatCurrency(used)}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[11px] font-medium uppercase text-slate-500">Vencimento</p>
-                      <p className="mt-0.5 text-sm font-semibold text-slate-700">{due || 'â€”'}</p>
-                    </div>
+                    {due && (
+                      <p className="text-xs text-slate-500 whitespace-nowrap">Vencimento {due}</p>
+                    )}
+                  </div>
+
+                  <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${percent >= 80 ? 'bg-red-500' : 'bg-blue-600'}`}
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="text-xs text-slate-500">Limite utilizado</span>
+                    <span className="text-xs font-semibold text-blue-600">
+                      {percent.toFixed(0)}%
+                    </span>
                   </div>
                 </div>
               );
@@ -92,6 +106,10 @@ export const CreditCardsOverviewCard: React.FC = () => {
         )}
       </div>
 
+      <div className="mt-3 pt-3 border-t border-slate-200 flex items-center justify-between shrink-0">
+        <span className="text-sm font-bold text-slate-800">Total devido</span>
+        <span className="text-sm font-bold text-red-500">{formatCurrency(totalDue)}</span>
+      </div>
     </div>
   );
 };
