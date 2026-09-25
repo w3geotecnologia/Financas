@@ -1234,4 +1234,203 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
               text-[11px]
               font-semibold
               uppercase
+              tracking-wider              text-[#1E293B]
+            ">
+              Despesas do Mês
+            </p>
+
+            <p className="
+              text-2xl
+              font-bold
+              text-[#DC263D]
+              mt-1
+              truncate
+            ">
+              {fmt(despesasMes)}
+            </p>
+
+            {/* Somente seta + percentual coloridos */}
+            <p className="
+              text-xs
+              mt-1
+              text-[#64748B]
+            ">
+              <span className={despVar.color}>
+                {despVar.arrow}{' '}
+                {despVar.percentage}
+              </span>{' '}
+              {despVar.label}
+            </p>
+
+          </div>
+
+          <div className="
+            w-12
+            h-12
+            rounded-full
+            bg-[#FCDBDB]
+            flex
+            items-center
+            justify-center
+            shrink-0
+            ml-3
+          ">
+            <TrendingDown className="
+              h-6
+              w-6
+              text-[#DC263D]
+            " />
+          </div>
+
+        </div>
+
+        {/* ===================================================
+            RESULTADO
+        =================================================== */}
+        <div className="
+          bg-white
+          rounded-2xl
+          shadow-sm
+          border
+          border-slate-200
+          p-5
+          flex
+          items-center
+          justify-between
+          sm:col-span-2
+          lg:col-span-1
+        ">
+
+          <div className="min-w-0">
+
+            <p className="
+              text-[11px]
+              font-semibold
+              uppercase
               tracking-wider
+              text-[#1E293B]
+            ">
+              Resultado do Mês
+            </p>
+
+            <p className={`
+              text-2xl
+              font-bold
+              mt-1
+              truncate
+              ${resultadoValueColor}
+            `}>
+              {fmtSigned(resultadoMes)}
+            </p>
+
+            {/* Somente seta + percentual coloridos */}
+            <p className="
+              text-xs
+              mt-1
+              text-[#64748B]
+            ">
+              <span className={resVar.color}>
+                {resVar.arrow}{' '}
+                {resVar.percentage}
+              </span>{' '}
+              {resVar.label}
+            </p>
+
+          </div>
+
+          <div className="
+            w-12
+            h-12
+            rounded-full
+            bg-[#E3ECFD]
+            flex
+            items-center
+            justify-center
+            shrink-0
+            ml-3
+          ">
+            <DollarSign className="
+              h-6
+              w-6
+              text-[#2563EB]
+            " />
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* =====================================================
+          BARRA — EVOLUÇÃO DO ORÇAMENTO
+      ===================================================== */}
+      <div className="
+        bg-white
+        rounded-2xl
+        shadow-sm
+        border
+        border-slate-200
+        px-5
+        py-3.5
+        flex
+        items-center
+        gap-4
+      ">
+
+        {/* Label */}
+        <p className="
+          text-[11px]
+          font-semibold
+          uppercase
+          tracking-wider
+          text-[#1E293B]
+          shrink-0
+        ">
+          Evolução do Orçamento
+        </p>
+
+        {/* Percentual */}
+        <p
+          className="text-xs font-semibold shrink-0"
+          style={{ color: orcamentoColor }}
+        >
+          {hideValues ? '••%' : `${orcamentoPct.toFixed(0)}% utilizado`}
+        </p>
+
+        {/* Barra de progresso */}
+        <div className="
+          flex-1
+          h-2.5
+          bg-slate-100
+          rounded-full
+          overflow-hidden
+          min-w-0
+        ">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: hideValues ? '0%' : `${orcamentoPct}%`,
+              backgroundColor: orcamentoColor
+            }}
+          />
+        </div>
+
+        {/* Valores */}
+        <p className="
+          text-xs
+          text-[#64748B]
+          shrink-0
+          whitespace-nowrap
+        ">
+          {hideValues
+            ? 'R$ •••••• de R$ ••••••'
+            : `${formatCurrency(orcamentoUtilizado)} de ${formatCurrency(orcamentoDisponivel)}`}
+        </p>
+
+        {/* Seta decorativa */}
+        <ChevronRight className="h-4 w-4 text-slate-300 shrink-0" />
+
+      </div>
+
+    </div>
+  );
+};
