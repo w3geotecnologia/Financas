@@ -1391,7 +1391,9 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
               mt-1
               text-[#64748B]
             ">
-              {varText(resultadoPrev, 0).label === '' ? '' : `Receitas - Despesas de ${currentMonth === 0 ? `Dez/${currentYear - 1}` : `${monthNames[currentMonth - 1].slice(0, 3)}/${currentYear}`}`}
+              {currentMonth === 0
+                ? 'Dezembro/' + (currentYear - 1)
+                : monthNames[currentMonth - 1] + '/' + currentYear}
             </p>
 
           </div>
