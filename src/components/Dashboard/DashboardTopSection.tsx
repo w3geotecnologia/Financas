@@ -265,6 +265,7 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
     const r = accounts
       .filter(
         a =>
+          a.description !== 'Saldo Anterior' &&
           a.type === 'receita' &&
           a.status?.toLowerCase() === 'recebido' &&
           a.dueDate &&
@@ -301,6 +302,7 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
     const d = accounts
       .filter(
         a =>
+          a.description !== 'Saldo Anterior' &&
           a.type === 'despesa' &&
           a.status?.toLowerCase() === 'pago' &&
           a.dueDate &&
@@ -319,6 +321,7 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
     const rp = accounts
       .filter(
         a =>
+          a.description !== 'Saldo Anterior' &&
           a.type === 'receita' &&
           a.status?.toLowerCase() === 'recebido' &&
           a.dueDate &&
@@ -337,6 +340,7 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
     const dp = accounts
       .filter(
         a =>
+          a.description !== 'Saldo Anterior' &&
           a.type === 'despesa' &&
           a.status?.toLowerCase() === 'pago' &&
           a.dueDate &&
@@ -368,11 +372,46 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
   // =========================================================
   // Resultados
   // =========================================================
+  // Saldo final acumulado até o fim do mês anterior (mesma regra da página Contas)
+  const accumulatedUntil = (untilMonth: number, untilYear: number) => {
+    let total = 0;
+    for (const a of accounts) {
+      if (!a.dueDate || a.description === 'Saldo Anterior') continue;
+      const d = new Date(a.dueDate + 'T00:00:00');
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      if (y < untilYear || (y === untilYear && m <= untilMonth)) {
+        if (a.type === 'receita' && a.status === 'recebido') total += a.amount || 0;
+        else if (a.type === 'despesa' && a.status === 'pago') total -= Math.abs(a.amount || 0);
+      }
+    }
+    return total;
+  };
+
+  const saldoAnterior = useMemo(
+    () => currentMonth === 0
+      ? accumulatedUntil(11, currentYear - 1)
+      : accumulatedUntil(currentMonth - 1, currentYear),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [accounts, currentMonth, currentYear]
+  );
+
+  const saldoAnteriorPrev = useMemo(
+    () => {
+      const m = currentMonth === 0 ? 11 : currentMonth - 1;
+      const y = currentMonth === 0 ? currentYear - 1 : currentYear;
+      return m === 0 ? accumulatedUntil(11, y - 1) : accumulatedUntil(m - 1, y);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [accounts, currentMonth, currentYear]
+  );
+
+  // Resultado do mês = saldo anterior + receitas recebidas - despesas pagas
   const resultadoMes =
-    receitasMes - despesasMes;
+    saldoAnterior + receitasMes - despesasMes;
 
   const resultadoPrev =
-    receitasPrev - despesasPrev;
+    saldoAnteriorPrev + receitasPrev - despesasPrev;
 
   const saldoConsolidado =
     banksTotal + investmentsTotal;
@@ -1132,6 +1171,75 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
       ">
 
         {/* ===================================================
+            SALDO MÊS ANTERIOR
+        =================================================== */}
+        <div className="
+          bg-white
+          rounded-2xl
+          shadow-sm
+          border
+          border-slate-200
+          p-5
+          flex
+          items-center
+          justify-between
+        ">
+
+          <div className="min-w-0">
+
+            <p className="
+              text-[11px]
+              font-semibold
+              uppercase
+              tracking-wider
+              text-[#1E293B]
+            ">
+              Saldo Mês Anterior
+            </p>
+
+            <p className={`
+              text-2xl
+              font-bold
+              mt-1
+              truncate
+              ${saldoAnterior >= 0 ? 'text-[#16A34A]' : 'text-[#DC263D]'}
+            `}>
+              {fmtSigned(saldoAnterior)}
+            </p>
+
+            <p className="
+              text-xs
+              mt-1
+              text-[#64748B]
+            ">
+              {currentMonth === 0
+                ? 'Dezembro/' + (currentYear - 1)
+                : monthNames[currentMonth - 1] + '/' + currentYear}
+            </p>
+
+          </div>
+
+          <div className="
+            w-12
+            h-12
+            rounded-full
+            bg-[#F1F5F9]
+            flex
+            items-center
+            justify-center
+            shrink-0
+            ml-3
+          ">
+            <History className="
+              h-6
+              w-6
+              text-[#64748B]
+            " />
+          </div>
+
+        </div>
+
+        {/* ===================================================
             RECEITAS
         =================================================== */}
         <div className="
@@ -1347,74 +1455,6 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
 
         </div>
 
-        {/* ===================================================
-            SALDO MÊS ANTERIOR
-        =================================================== */}
-        <div className="
-          bg-white
-          rounded-2xl
-          shadow-sm
-          border
-          border-slate-200
-          p-5
-          flex
-          items-center
-          justify-between
-        ">
-
-          <div className="min-w-0">
-
-            <p className="
-              text-[11px]
-              font-semibold
-              uppercase
-              tracking-wider
-              text-[#1E293B]
-            ">
-              Saldo Mês Anterior
-            </p>
-
-            <p className={`
-              text-2xl
-              font-bold
-              mt-1
-              truncate
-              ${resultadoPrev >= 0 ? 'text-[#16A34A]' : 'text-[#DC263D]'}
-            `}>
-              {fmtSigned(resultadoPrev)}
-            </p>
-
-            <p className="
-              text-xs
-              mt-1
-              text-[#64748B]
-            ">
-              {currentMonth === 0
-                ? 'Dezembro/' + (currentYear - 1)
-                : monthNames[currentMonth - 1] + '/' + currentYear}
-            </p>
-
-          </div>
-
-          <div className="
-            w-12
-            h-12
-            rounded-full
-            bg-[#F1F5F9]
-            flex
-            items-center
-            justify-center
-            shrink-0
-            ml-3
-          ">
-            <History className="
-              h-6
-              w-6
-              text-[#64748B]
-            " />
-          </div>
-
-        </div>
 
       </div>
 
