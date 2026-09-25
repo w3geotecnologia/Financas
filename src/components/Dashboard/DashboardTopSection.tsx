@@ -29,6 +29,8 @@ import {
   Crown,
   Clock,
   Mic,
+  History,
+  PiggyBank,
 } from 'lucide-react';
 
 import { supabase } from '@/integrations/supabase/client';
@@ -36,6 +38,8 @@ import { useAccounts } from '@/contexts/AccountsContext';
 import { formatCurrency } from '@/utils/formatters';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTrialStatus } from '@/hooks/useTrialStatus';
+import { UserMenuPill } from '@/components/Dashboard/UserMenuPill';
+import { MainMenuButton } from '@/components/MainMenuButton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -116,7 +120,6 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
       if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current);
     };
   }, []);
-
   const [banksRaw, setBanksRaw] = useState(0);
   const [investmentsList, setInvestmentsList] = useState<
     { current_value: number; purchase_date: string | null }[]
@@ -233,8 +236,12 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
     receitasTotalMes,
     despesasMes,
     receitasPrev,
-    despesasPrev
+    despesasPrev,
+    saldoAnterior
   } = useMemo(() => {
+    const isSaldoAnterior = (a: any) =>
+      a.description === 'Saldo Anterior';
+
     const inMonth = (
       dueDate: string,
       m: number,
@@ -260,9 +267,44 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
         ? currentYear - 1
         : currentYear;
 
+    // Data-limite: primeiro dia do mês selecionado
+    const selectedMonthStart = new Date(currentYear, currentMonth, 1);
+
+    // Soma de todas as entradas "Saldo Anterior" cujo dueDate seja
+    // anterior ao mês selecionado (cobre múltiplos anos e viradas de ano)
+    const saldoAnteriorAno = accounts
+      .filter(a => isSaldoAnterior(a) && a.dueDate)
+      .reduce((s, a) => {
+        const d = new Date(a.dueDate + 'T00:00:00');
+        if (d >= selectedMonthStart) return s;
+        const val = a.type === 'receita'
+          ? a.amount
+          : -Math.abs(a.amount);
+        return s + val;
+      }, 0);
+
+    // Acumulado liquidado de todos os meses anteriores ao mês selecionado
+    // (independente do ano — mesma lógica do previousBalance em AccountsSummaryCards)
+    const acumuladoAntes = accounts
+      .filter(
+        a =>
+          !isSaldoAnterior(a) &&
+          a.dueDate &&
+          a.status?.toLowerCase() ===
+            (a.type === 'receita' ? 'recebido' : 'pago')
+      )
+      .reduce((s, a) => {
+        const d = new Date(a.dueDate + 'T00:00:00');
+        if (d >= selectedMonthStart) return s;
+        return a.type === 'receita'
+          ? s + (a.amount || 0)
+          : s - Math.abs(a.amount || 0);
+      }, 0);
+
     const r = accounts
       .filter(
         a =>
+          !isSaldoAnterior(a) &&
           a.type === 'receita' &&
           a.status?.toLowerCase() === 'recebido' &&
           a.dueDate &&
@@ -282,6 +324,7 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
     const rTotal = accounts
       .filter(
         a =>
+          !isSaldoAnterior(a) &&
           a.type === 'receita' &&
           a.dueDate &&
           inMonth(
@@ -299,6 +342,7 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
     const d = accounts
       .filter(
         a =>
+          !isSaldoAnterior(a) &&
           a.type === 'despesa' &&
           a.status?.toLowerCase() === 'pago' &&
           a.dueDate &&
@@ -317,6 +361,7 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
     const rp = accounts
       .filter(
         a =>
+          !isSaldoAnterior(a) &&
           a.type === 'receita' &&
           a.status?.toLowerCase() === 'recebido' &&
           a.dueDate &&
@@ -335,6 +380,7 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
     const dp = accounts
       .filter(
         a =>
+          !isSaldoAnterior(a) &&
           a.type === 'despesa' &&
           a.status?.toLowerCase() === 'pago' &&
           a.dueDate &&
@@ -355,7 +401,8 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
       receitasTotalMes: rTotal,
       despesasMes: d,
       receitasPrev: rp,
-      despesasPrev: dp
+      despesasPrev: dp,
+      saldoAnterior: saldoAnteriorAno + acumuladoAntes
     };
   }, [
     accounts,
@@ -366,11 +413,16 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
   // =========================================================
   // Resultados
   // =========================================================
-  const resultadoMes =
-    receitasMes - despesasMes;
+
+  // "Resultado do Mês" = soma dos saldos finais de todos os bancos
+  // cadastrados, ajustado pela posição do mês selecionado (banksTotal).
+  const resultadoMes = banksTotal;
 
   const resultadoPrev =
     receitasPrev - despesasPrev;
+
+  const saldoFinal =
+    resultadoMes;
 
   const saldoConsolidado =
     banksTotal + investmentsTotal;
@@ -557,6 +609,16 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
       ? 'text-[#2563EB]'
       : 'text-[#DC263D]';
 
+  const saldoAnteriorValueColor =
+    saldoAnterior >= 0
+      ? 'text-[#16A34A]'
+      : 'text-[#DC263D]';
+
+  const saldoFinalValueColor =
+    saldoFinal >= 0
+      ? 'text-[#16A34A]'
+      : 'text-[#DC263D]';
+
   return (
     <div className="space-y-4">
 
@@ -614,45 +676,11 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
               MENU FINANCEIRO (mobile: botão simples | desktop: dropdown hover/clique)
           ================================================= */}
 
-          {/* Mobile: botão Menu Principal + botão Voz lado a lado */}
-          {onOpenMobileMenu && (
-            <div className="flex lg:hidden items-center gap-2">
-              <button
-                onClick={onOpenMobileMenu}
-                className="
-                  flex items-center gap-2
-                  bg-white rounded-full shadow-sm
-                  border border-slate-200
-                  px-4 py-2
-                  text-sm font-semibold text-[#0F172A]
-                  hover:bg-slate-50 transition-colors
-                "
-              >
-                <Menu className="h-4 w-4 text-[#2563EB]" />
-                Ir Menu Principal
-              </button>
-
-              {onVoiceClick && (
-                <button
-                  type="button"
-                  onClick={onVoiceClick}
-                  aria-label="Cadastro por voz"
-                  className="
-                    flex items-center gap-2
-                    bg-gradient-to-r from-[#2563EB] to-[#2a9d8f]
-                    text-white rounded-full shadow-sm
-                    border border-transparent
-                    px-4 py-2
-                    text-sm font-semibold
-                    hover:opacity-90 active:opacity-80 transition-opacity
-                  "
-                >
-                  <Mic className="h-4 w-4" />
-                  Cadastrar por Voz
-                </button>
-              )}
-            </div>
-          )}
+          {/* Mobile: Menu Principal (esquerda) + logout/usuário (direita) */}
+          <div className="flex lg:hidden items-center gap-2 w-full">
+            <MainMenuButton />
+            <UserMenuPill className="flex-1 justify-end" />
+          </div>
 
           {/* Desktop: dropdown hover/clique */}
           <div
@@ -864,9 +892,85 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
       </div>
 
       {/* =====================================================
+          MOBILE — layout resumido (somente < lg)
+          Ordem: Valor Total Bancos → Recebidos/Despesas → Cartões
+          (Saldo por banco e Para onde vai meu dinheiro vêm logo
+           abaixo, renderizados pela página que usa este componente)
+      ===================================================== */}
+      <div className="lg:hidden space-y-3">
+
+        {/* VALOR TOTAL BANCOS (+ botão de ocultar valores) */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full bg-[#DCF3E2] flex items-center justify-center shrink-0">
+            <Landmark className="h-5 w-5 text-[#16A34A]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#1E293B]">
+              Valor Total Bancos
+            </p>
+            <p className={`text-xl font-bold truncate ${banksValueColor}`}>
+              {loadingTotals ? '...' : fmtSigned(banksTotal)}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setHideValues(v => !v)}
+            aria-label={hideValues ? 'Mostrar valores' : 'Ocultar valores'}
+            className="text-[#94A3B8] hover:text-[#475569] p-1"
+          >
+            {hideValues ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+          </button>
+        </div>
+
+        {/* RECEBIDOS NO MÊS + DESPESAS DO MÊS */}
+        <div className="grid grid-cols-2 gap-3">
+
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-full bg-[#DCF3E2] flex items-center justify-center shrink-0">
+                <TrendingUp className="h-4 w-4 text-[#16A34A]" />
+              </div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#1E293B] leading-tight">
+                Recebidos no Mês
+              </p>
+            </div>
+            <p className="text-lg font-bold truncate text-[#16A34A]">
+              {fmt(receitasMes)}
+            </p>
+            <p className="text-[11px] mt-1 text-[#64748B]">
+              <span className={recVar.color}>{recVar.arrow} {recVar.percentage}</span>
+              {' '}{recVar.label}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-full bg-[#FCDBDB] flex items-center justify-center shrink-0">
+                <TrendingDown className="h-4 w-4 text-[#DC263D]" />
+              </div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#1E293B] leading-tight">
+                Despesas do Mês
+              </p>
+            </div>
+            <p className="text-lg font-bold truncate text-[#DC263D]">
+              {fmt(despesasMes)}
+            </p>
+            <p className="text-[11px] mt-1 text-[#64748B]">
+              <span className={despVar.color}>{despVar.arrow} {despVar.percentage}</span>
+              {' '}{despVar.label}
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* =====================================================
           PRIMEIRA LINHA — SALDO CONSOLIDADO
       ===================================================== */}
       <div className="
+        hidden
+        lg:block
         bg-white
         rounded-2xl
         shadow-sm
@@ -1001,8 +1105,7 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
                 tracking-wider
                 text-[#1E293B]
               ">
-                Contas bancárias
-              </p>
+               Valor Total Bancos </p>
 
               <p className={`
                 text-lg
@@ -1133,229 +1236,84 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
       {/* =====================================================
           SEGUNDA LINHA — RESUMO MENSAL
       ===================================================== */}
-      <div className="
-        grid
-        grid-cols-1
-        sm:grid-cols-2
-        lg:grid-cols-3
-        gap-4
-      ">
+      <div className="hidden lg:grid lg:grid-cols-4 gap-3 sm:gap-4">
 
-        {/* ===================================================
-            RECEITAS
-        =================================================== */}
-        <div className="
-          bg-white
-          rounded-2xl
-          shadow-sm
-          border
-          border-slate-200
-          p-5
-          flex
-          items-center
-          justify-between
-        ">
+        {/* SALDO ANTERIOR */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 rounded-full bg-[#EDE9FE] flex items-center justify-center shrink-0">
+              <History className="h-4 w-4 text-[#7C3AED]" />
+            </div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#1E293B]">
+              Saldo Mês Anterior
+            </p>
+          </div>
+          <p className={`text-xl font-bold truncate ${saldoAnteriorValueColor}`}>
+            {fmtSigned(saldoAnterior)}
+          </p>
+          <p className="text-[11px] mt-1.5 text-[#64748B]">
+            {currentMonth === 0
+              ? `Início de ${currentYear}`
+              : `Acumulado até ${monthNames[currentMonth - 1].slice(0, 3)}/${currentYear}`}
+          </p>
+        </div>
 
-          <div className="min-w-0">
-
-            <p className="
-              text-[11px]
-              font-semibold
-              uppercase
-              tracking-wider
-              text-[#1E293B]
-            ">
+        {/* RECEITAS DO MÊS */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 rounded-full bg-[#DCF3E2] flex items-center justify-center shrink-0">
+            <TrendingUp className="h-4 w-4 text-[#16A34A]" />
+              
+            </div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#1E293B]">
               Receitas do Mês
             </p>
-
-            <p className="
-              text-2xl
-              font-bold
-              text-[#16A34A]
-              mt-1
-              truncate
-            ">
-              {fmt(receitasMes)}
-            </p>
-
-            {/* Somente seta + percentual coloridos */}
-            <p className="
-              text-xs
-              mt-1
-              text-[#64748B]
-            ">
-              <span className={recVar.color}>
-                {recVar.arrow}{' '}
-                {recVar.percentage}
-              </span>{' '}
-              {recVar.label}
-            </p>
-
           </div>
-
-          <div className="
-            w-12
-            h-12
-            rounded-full
-            bg-[#DCF3E2]
-            flex
-            items-center
-            justify-center
-            shrink-0
-            ml-3
-          ">
-            <Wallet className="
-              h-6
-              w-6
-              text-[#16A34A]
-            " />
-          </div>
-
+          <p className="text-xl font-bold truncate text-[#16A34A]">
+            {fmt(receitasMes)}
+          </p>
+          <p className="text-[11px] mt-1.5 text-[#64748B]">
+            <span className={recVar.color}>{recVar.arrow} {recVar.percentage}</span>
+            {' '}{recVar.label}
+          </p>
         </div>
 
-        {/* ===================================================
-            DESPESAS
-        =================================================== */}
-        <div className="
-          bg-white
-          rounded-2xl
-          shadow-sm
-          border
-          border-slate-200
-          p-5
-          flex
-          items-center
-          justify-between
-        ">
-
-          <div className="min-w-0">
-
-            <p className="
-              text-[11px]
-              font-semibold
-              uppercase
-              tracking-wider              text-[#1E293B]
-            ">
+        {/* DESPESAS DO MÊS */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 rounded-full bg-[#FCDBDB] flex items-center justify-center shrink-0">
+              <TrendingDown className="h-4 w-4 text-[#DC263D]" />
+            </div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#1E293B]">
               Despesas do Mês
             </p>
-
-            <p className="
-              text-2xl
-              font-bold
-              text-[#DC263D]
-              mt-1
-              truncate
-            ">
-              {fmt(despesasMes)}
-            </p>
-
-            {/* Somente seta + percentual coloridos */}
-            <p className="
-              text-xs
-              mt-1
-              text-[#64748B]
-            ">
-              <span className={despVar.color}>
-                {despVar.arrow}{' '}
-                {despVar.percentage}
-              </span>{' '}
-              {despVar.label}
-            </p>
-
           </div>
-
-          <div className="
-            w-12
-            h-12
-            rounded-full
-            bg-[#FCDBDB]
-            flex
-            items-center
-            justify-center
-            shrink-0
-            ml-3
-          ">
-            <TrendingDown className="
-              h-6
-              w-6
-              text-[#DC263D]
-            " />
-          </div>
-
+          <p className="text-xl font-bold truncate text-[#DC263D]">
+            {fmt(despesasMes)}
+          </p>
+         <p className="text-[11px] mt-1.5 text-[#64748B]">
+            <span className={despVar.color}>{despVar.arrow} {despVar.percentage}</span>
+            {' '}{despVar.label}
+          </p>
         </div>
 
-        {/* ===================================================
-            RESULTADO
-        =================================================== */}
-        <div className="
-          bg-white
-          rounded-2xl
-          shadow-sm
-          border
-          border-slate-200
-          p-5
-          flex
-          items-center
-          justify-between
-          sm:col-span-2
-          lg:col-span-1
-        ">
-
-          <div className="min-w-0">
-
-            <p className="
-              text-[11px]
-              font-semibold
-              uppercase
-              tracking-wider
-              text-[#1E293B]
-            ">
+        {/* RESULTADO DO MÊS */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 rounded-full bg-[#E3ECFD] flex items-center justify-center shrink-0">
+              <DollarSign className="h-4 w-4 text-[#2563EB]" />
+            </div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#1E293B]">
               Resultado do Mês
             </p>
-
-            <p className={`
-              text-2xl
-              font-bold
-              mt-1
-              truncate
-              ${resultadoValueColor}
-            `}>
-              {fmtSigned(resultadoMes)}
-            </p>
-
-            {/* Somente seta + percentual coloridos */}
-            <p className="
-              text-xs
-              mt-1
-              text-[#64748B]
-            ">
-              <span className={resVar.color}>
-                {resVar.arrow}{' '}
-                {resVar.percentage}
-              </span>{' '}
-              {resVar.label}
-            </p>
-
           </div>
-
-          <div className="
-            w-12
-            h-12
-            rounded-full
-            bg-[#E3ECFD]
-            flex
-            items-center
-            justify-center
-            shrink-0
-            ml-3
-          ">
-            <DollarSign className="
-              h-6
-              w-6
-              text-[#2563EB]
-            " />
-          </div>
-
+          <p className={`text-xl font-bold truncate ${resultadoValueColor}`}>
+            {fmtSigned(resultadoMes)}
+          </p>
+          <p className="text-[11px] mt-1.5 text-[#64748B]">
+            <span className={resVar.color}>{resVar.arrow} {resVar.percentage}</span>
+            {' '}{resVar.label}
+          </p>
         </div>
 
       </div>
@@ -1371,7 +1329,8 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
         border-slate-200
         px-5
         py-3.5
-        flex
+        hidden
+        lg:flex
         items-center
         gap-4
       ">
