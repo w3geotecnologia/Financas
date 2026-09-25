@@ -29,6 +29,7 @@ import {
   Crown,
   Clock,
   Mic,
+  History,
 } from 'lucide-react';
 
 import { supabase } from '@/integrations/supabase/client';
@@ -903,39 +904,25 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
             <div className="
               flex
               items-center
-              justify-between
+              gap-1.5
               mb-2
             ">
 
-              <div className="
-                flex
-                items-center
-                gap-1.5
+              <span className="
+                text-[11px]
+                font-semibold
+                uppercase
+                tracking-wider
+                text-[#1E293B]
               ">
-
-                {/* Mesmo tamanho dos outros títulos */}
-                <span className="
-                  text-[11px]
-                  font-semibold
-                  uppercase
-                  tracking-wider
-                  text-[#1E293B]
-                ">
-                  Saldo Consolidado
-                </span>
-
-                <Info className="
-                  h-3
-                  w-3
-                  text-[#CBD5E1]
-                " />
-
-              </div>
+                Saldo Consolidado
+              </span>
 
               <button
                 onClick={() =>
                   setHideValues(v => !v)
                 }
+                aria-label="Ocultar ou exibir valores"
                 className="
                   text-[#94A3B8]
                   hover:text-[#475569]
@@ -1142,7 +1129,7 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
         grid
         grid-cols-1
         sm:grid-cols-2
-        lg:grid-cols-3
+        lg:grid-cols-4
         gap-4
       ">
 
@@ -1209,7 +1196,7 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
             shrink-0
             ml-3
           ">
-            <Wallet className="
+            <TrendingUp className="
               h-6
               w-6
               text-[#16A34A]
@@ -1303,8 +1290,6 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
           flex
           items-center
           justify-between
-          sm:col-span-2
-          lg:col-span-1
         ">
 
           <div className="min-w-0">
@@ -1359,6 +1344,73 @@ export const DashboardTopSection: React.FC<DashboardTopSectionProps> = ({
               h-6
               w-6
               text-[#2563EB]
+            " />
+          </div>
+
+        </div>
+
+        {/* ===================================================
+            SALDO MÊS ANTERIOR
+        =================================================== */}
+        <div className="
+          bg-white
+          rounded-2xl
+          shadow-sm
+          border
+          border-slate-200
+          p-5
+          flex
+          items-center
+          justify-between
+        ">
+
+          <div className="min-w-0">
+
+            <p className="
+              text-[11px]
+              font-semibold
+              uppercase
+              tracking-wider
+              text-[#1E293B]
+            ">
+              Saldo Mês Anterior
+            </p>
+
+            <p className={`
+              text-2xl
+              font-bold
+              mt-1
+              truncate
+              ${resultadoPrev >= 0 ? 'text-[#16A34A]' : 'text-[#DC263D]'}
+            `}>
+              {fmtSigned(resultadoPrev)}
+            </p>
+
+            <p className="
+              text-xs
+              mt-1
+              text-[#64748B]
+            ">
+              {varText(resultadoPrev, 0).label === '' ? '' : `Receitas - Despesas de ${currentMonth === 0 ? `Dez/${currentYear - 1}` : `${monthNames[currentMonth - 1].slice(0, 3)}/${currentYear}`}`}
+            </p>
+
+          </div>
+
+          <div className="
+            w-12
+            h-12
+            rounded-full
+            bg-[#F1F5F9]
+            flex
+            items-center
+            justify-center
+            shrink-0
+            ml-3
+          ">
+            <History className="
+              h-6
+              w-6
+              text-[#64748B]
             " />
           </div>
 
